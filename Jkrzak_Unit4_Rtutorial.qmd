@@ -1,0 +1,680 @@
+---
+title: "Unit4_RTutorial Week"
+format: html
+editor: visual
+---
+
+# Introduction
+
+In Unit 4: You will discover text and social network analysis by reviewing the walkthroughs from the [Data science in education Using R](https://datascienceineducation.com/) book. In Unit3, we examined the foundations of the collaborative data-intensive improvement (CDI) model and discussed the text mining methods in education from a theoretical perspective. Now, you will able to practice text-mining in the Walkthrough 5: Text Analysis with Twitter Data. After you completed the Walkthrough 5, you will move to the Social Network Analysis part. In the Walkthrough 6, you will discover interactions among the Twitter users by following SNA. To complete this week's tutorial, please read through everything carefully and complete all "Your Turn" parts. Each "Your Turn" is 1 point and render&publishing your work (e.g., RPubs, QuartoPubs, GitHub) is 1 point.
+
+## Walkthrough 5: Text Analysis With Social Media Data
+
+### Topics Emphasized
+
+-   Tidying data
+
+-   Transforming data
+
+-   Visualizing data
+
+### Functions Introduced
+
+-   `sample_n()`
+
+-   `set.seed()`
+
+-   `tidytext::unnest_tokens()`
+
+-   `nrc::get_sentiments()`
+
+-   `tidytext::inner_join()`
+
+### Vocabulary
+
+-   RDS files
+
+-   text analysis
+
+-   stop words
+
+-   tokenize
+
+## Chapter Overview
+
+In this chapter, we focus on analyzing textual data from Twitter. We focus on this particular data source because we think it is relevant to a number of educational topics and questions, including how newcomers learn to visualize data. In addition, Twitter data is complex, and includes not only information about who posted a tweet (and when - and a great deal of additional information (see ([Michael W. Kearney et al., 2022](https://datascienceineducation.com/references#ref-R-rtweet))), it also includes the text of the tweet). This makes it especially well-suited for exploring the uses of text analysis, which is broadly part of a group of techniques involving the analysis of text as data, Natural Language Processing (often abbreviated NLP) ([Hirschberg & Manning, 2015](https://datascienceineducation.com/references#ref-hirschberg2015)).
+
+### Background
+
+When we think about data science in education, our minds tends to go data stored in spreadsheets. But what can we learn about the student experience from text data? Take a moment to mentally review all the moments in your work day that you generated or consumed text data. In education, we're surrounded by it. We do our lessons in word processor documents, our students submit assignments online, and the school community expresses themselves on public social media platforms. The text we generate can be an authentic reflection of reality in schools, so how might we learn from it?
+
+Even the most basic text analysis techniques will expand your data science toolkit. For example, you can use text analysis to count the number of key words that appear in open ended survey responses. You can analyze word patterns in student responses or message board posts.
+
+Analyzing a collection of text is different from analyzing large numerical datasets because words don't have agreed upon values the way numbers do. The number 2 will always be more than 1 and less than 3. The word "fantastic," on the other hand, has multiple ambiguous levels of degree depending on interpretation and context.
+
+Using text analysis can help to broadly estimate what is happening in the text. When paired with observations, interviews, and close review of the text, this approach can help education staff learn from text data. In this chapter, we'll learn how to count the frequency of words in a dataset and associate those words with common feelings like positivity or joy.
+
+We'll show these techniques using a dataset of tweets. We encourage you to complete the walkthrough, then reflect on how the skills learned can be applied to other texts, like word processing documents or websites.
+
+### Data Source
+
+It's useful to learn text analysis techniques from datasets that are available for download. Take a moment to do an online search for "download tweet dataset" and note the abundance of Twitter datasets available. Since there's so much, it's useful to narrow the tweets to only those that help you answer your analytic questions. Hashtags are text within a tweet that act as a way to categorize content. Here's an example:
+
+> RT \@CKVanPay: I'm trying to recreate some Stata code in R, anyone have a good resource for what certain functions in Stata are doing? #RStats #Stata
+
+Twitter recognizes any words that start with a "\#" as a hashtag. The hashtags "#RStats" and "#Stata" make this tweet conveniently searchable. If Twitter uses search for "#RStats", Twitter returns all the Tweets containing that hashtag.
+
+In this example, we'll be analyzing a dataset of tweets that have the hashtag #tidytuesday (<https://twitter.com/hashtag/tidytuesday>). #tidytuesday is a community sparked by the work of one of the *Data Science in Education Using R* co-authors, Jesse Mostipak, who created the (related) #r4ds community from which #tidytuesday was created. #tidytuesday is a weekly data visualization challenge. A great place to see examples from past #tidytuesday challenges is an interactive Shiny application (<https://github.com/nsgrantham/tidytuesdayrocks>).
+
+The #tidytuesday hashtag (search Twitter for the hashtag, or see the results here: <http://bit.ly/tidytuesday-search>) returns tweets about the weekly TidyTuesday practice, where folks learning R create and tweet data visualizations they made while learning to use tidyverse R packages.
+
+### Methods
+
+In this walkthrough, we'll be learning how to count words in a text dataset. We'll also use a technique called sentiment analysis to count and visualize the appearance of words that have a positive association. Lastly, we'll learn how to get more context by selecting random rows of tweets for closer reading.
+
+## Load Packages
+
+For this analysis, we'll be using the {tidyverse}, {here}, and {dataedu} packages. We will also use the {tidytext} package for working with textual data ([Robinson & Silge, 2022](https://datascienceineducation.com/references#ref-R-tidytext)). As it has not been used previously in the book, you may need to install the {tidytext} package (and - if you haven't just yet - the other packages), first. For instructions on and an overview about installing packages, see the [Packages section](https://datascienceineducation.com/c06#c06p) of the [Foundational Skills](https://datascienceineducation.com/c06#c06)chapter.
+
+Let's load our packages before moving on to import the data:
+
+```{r}
+library(tidyverse)
+library(here)
+library(tidytext)
+```
+
+We will **load dataedu library** as well. But, before loading that library, we need to install the library. In your previous assignment, you practiced to install a library from CRAN repository. Yet, that is not only the way to install a library. Sometimes, developer creates new libraries and share them through the GitHub. This is also a case for the "dataedu" library. Check the code below and run it.
+
+```{r eval=FALSE}
+# install remotes
+install.packages("remotes", repos = "http://cran.us.r-project.org")
+
+# install the dataedu package
+remotes::install_github("data-edu/dataedu")
+
+#load the library
+library(dataedu)
+
+```
+
+## Import Data
+
+We've included the raw dataset of TidyTuesday tweets in the {dataedu} package. You can see the dataset by typing `tt_tweets`. Let's start by assigning the name `raw_tweets` to this dataset:
+
+```{r}
+raw_tweets <- dataedu::tt_tweets
+```
+
+### Your Turn:
+
+Let's return to our `raw_tweets` dataset. Run `str(raw_tweets)` and notice the number of variables in this dataset. It's good practice to use functions like `glimpse()` , `head()` or `str()` to look at the data type of each variable.
+
+```{r}
+head(raw_tweets)
+
+```
+
+**What did you realize about this data?**
+
+-   **This data has a TON of information, much more than someone can reasonably review without cleaning up the data to inspect it further.**
+
+For this walkthrough, we won't need all 90 variables so let's clean the dataset and keep only the ones we want.
+
+## Process Data
+
+In this section we'll select the columns we need for our analysis and we'll transform the dataset so each row represents a word. After that, our dataset will be ready for exploring.
+
+### Your Turn:
+
+Complete the code below.
+
+First, let's use `select()` to pick the two columns we'll need: `status_id` and `text`.
+
+`status_id` will help us associate interesting words with a particular tweet and `text` will give us the text from that tweet.
+
+We'll also change `status_id` to the character data type since it's meant to label tweets and doesn't actually represent a numerical value.
+
+```{r}
+tweets <-
+  raw_tweets |>
+  #filter for English tweets
+  filter(lang == "en") |>
+  select(status_id,text) |>
+  # Convert the ID field to the character data type
+  mutate(status_id = as.character(status_id))
+```
+
+Now the dataset has a column to identify each tweet and a column that shows the text that users tweeted. But each row has the entire tweet in the `text` variable, which makes it hard to analyze. If we kept our dataset like this, we'd need to use functions on each row to do something like count the number of times the word "good" appears. We can count words more efficiently if each row represented a single word. Splitting sentences in a row into single words in a row is called "tokenizing." In their book *Text Mining With R*, Silge & Robinson ([2017](https://datascienceineducation.com/references#ref-silge2017text))describe tokens this way:
+
+> A token is a meaningful unit of text, such as a word, that we are interested in using for analysis, and tokenization is the process of splitting text into tokens. This one-token-per-row structure is in contrast to the ways text is often stored in current analyses, perhaps as strings or in a document-term matrix.
+
+Let's use `unnest_tokens()` from the {tidytext} package to take our dataset of tweets and transform it into a dataset of words.
+
+```{r}
+tokens <- 
+  tweets %>%
+  unnest_tokens(output = word, input = text)
+
+tokens 
+```
+
+We use `output = word` to tell `unnest_tokens()` that we want our column of tokens to be called `word`. We use `input = text` to tell `unnest_tokens()` to tokenize the tweets in the `text` column of our `tweets` dataset. The result is a new dataset where each row has a single word in the `word` column and a unique ID in the `status_id` column that tells us which tweet the word appears in.
+
+### Your Turn:
+
+**What happened after you tokenized the data? How did the number of observations change?**
+
+-   **The number of observations increased substantially to over 131,000 observations**
+
+### Removing Stop Words
+
+We're almost ready to start analyzing the dataset! There's one more step we'll take--removing common words that don't help us learn about what people are tweeting about. Words like "the" or "a" are in a category of words called "stop words". Stop words serve a function in verbal communication, but don't tell us much on their own. As a result, they clutter our dataset of useful words and make it harder to manage the volume of words we want to analyze. The {tidytext} package includes a dataset called `stop_words` that we'll use to remove rows containing stop words. We'll use `anti_join`() on our `tokens` dataset and the `stop_words`dataset to keep only rows that have words *not* appearing in the `stop_words` dataset.
+
+Run the following code:
+
+```{r}
+data(stop_words)
+
+tokens <-
+  tokens %>%
+  anti_join(stop_words, by = "word")
+```
+
+Why does this work? Let's look closer. `inner_join()` matches the observations in one dataset to another by a specified common variable. Any rows that don't have a match get dropped from the resulting dataset. `anti_join()` does the same thing as `inner_join()` except it drops matching rows and keeps the rows that *don't* match. This is convenient for our analysis because we want to remove rows from `tokens` that contain words in the `stop_words` dataset. When we call `anti_join()`, we're left with rows that *don't*match words in the `stop_words` dataset. These remaining words are the ones we'll be analyzing.
+
+One final note before we start counting words: Remember when we first tokenized our dataset and we passed `unnest_tokens()` the argument `output = word`? We conveniently chose `word` as our column name because it matches the column name `word` in the `stop_words` dataset. This makes our call to `anti_join()` simpler because `anti_join()` knows to look for the column named `word` in each dataset.
+
+## Analysis: Counting Words
+
+Now it's time to start exploring our newly cleaned dataset of tweets. Computing the frequency of each word and seeing which words showed up the most often is a good start. We can pipe `tokens` to the `count`function to do this:
+
+```{r}
+tokens |>
+    count(word, sort = TRUE) 
+```
+
+We pass `count()` the argument `sort = TRUE` to sort the `n` variable from the highest value to the lowest value. This makes it easy to see the most frequently occurring words at the top. Not surprisingly, "tidytuesday" was the third most frequent word in this dataset.
+
+We may want to explore further by showing the frequency of words as a percent of the whole dataset. Calculating percentages like this is useful in a lot of education scenarios because it helps us make comparisons across different sized groups. For example, you may want to calculate what percentage of students in each classroom receive special education services.
+
+In our tweets dataset, we'll be calculating the count of words as a percentage of all tweets. We can do that by using `mutate()` to add a column called `percent`. `percent` will divide `n` by `sum(n)`, which is the total number of words. Finally, will multiply the result by 100.
+
+```{r}
+tokens |>
+  count(word, sort = TRUE) %>%
+  # n as a percent of total words
+  mutate(percent = n / sum(n) * 100)
+```
+
+### Your Turn:
+
+**What did you in the percentage -word table? Did you recognize anything interesting?**
+
+-   **The phrase "tidytuesday" appeared 7% of the time whereas "data" only appeared 1.5% of the time**
+
+## Analysis: Sentiment Analysis
+
+Now that we have a sense of the most frequently appearing words, it's time to explore some questions in our tweets dataset. Let's imagine that we're education consultants trying to learn about the community surrounding the TidyTuesday data visualization ritual. We know from the first part of our analysis that the token "dataviz" (a short name for data visualization) appeared frequently relative to other words, so maybe we can explore that further. A good start would be to see how the appearance of that token in a tweet is associated with other positive words.
+
+We'll need to use a technique called sentiment analysis to get at the "positivity" of words in these tweets. Sentiment analysis tries to evaluate words for their emotional association. If we analyze words by the emotions they convey, we can start to explore patterns in large text datasets like our `tokens` data.
+
+Earlier we used `anti_join()` to remove stop words in our dataset. We're going to do something similar here to reduce our `tokens` dataset to only words that have a positive association. We'll use a dataset called the **NRC Word-Emotion Association Lexicon to help us identify words with a positive association**. This dataset was published in a work called Crowdsourcing a Word-Emotion Association Lexicon ([Mohammad & Turney, 2013](https://datascienceineducation.com/references#ref-mohammad2013))
+
+We need to install a package called {textdata} to make sure we have the NRC Word-Emotion Association Lexicon dataset available to us. Note that you only need to have this package installed. You do not need to load it with the `library(textdata)` command.
+
+If you don't already have it, let's install {textdata}:
+
+```{r eval=FALSE}
+install.packages("textdata")
+library(textdata)
+```
+
+To explore this dataset more, we'll use a {tidytext} function called `get_sentiments()` to view some words and their associated sentiment. If this is your first time using the NRC Word-Emotion Association Lexicon, you'll be prompted to download the NRC lexicon. Respond "yes" to the prompt and the NRC lexicon will download. Note that you'll only have to do this the first time you use the NRC lexicon.
+
+```{r}
+get_sentiments("nrc")
+```
+
+This returns a dataset with two columns. The first is `word` and contains a list of words. The second is the `sentiment` column, which contains an emotion associated with each word. This dataset is similar to the `stop_words` dataset. Note that this dataset also uses the column name `word`, which will again make it easy for us to match this dataset to our `tokens` dataset.
+
+### Count Positive Words
+
+Let's begin working on reducing our `tokens` dataset down to only words that the NRC dataset associates with positivity. We'll start by creating a new dataset, `nrc_pos`, which contains the NRC words that have the positive sentiment. Then we'll match that new dataset to `tokens` using the `word` column that is common to both datasets. Finally, we'll use `count()` to total up the appearances of each positive word.
+
+```{r}
+# Only positive in the NRC dataset
+nrc_pos <-
+  get_sentiments("nrc") %>%
+  filter(sentiment == "positive")
+
+# Match to tokens
+pos_tokens_count <-
+  tokens %>%
+  inner_join(nrc_pos, by = "word") %>%
+  # Total appearance of positive words
+  count(word, sort = TRUE) 
+
+pos_tokens_count
+```
+
+### Your Turn:
+
+**After you run the previous code chuck and observed the "pos_tokens_count", what did this output tell you?**
+
+-   **The word fun was used 173 times and the word learning was used 97 times. These are the number of instances of positive words in the data set.**
+
+We can visualize these words nicely by using {ggplot2} to show the positive words in a bar chart. There are 644 words total, which is hard to convey in a compact chart. We'll solve that problem by filtering our dataset to only words that appear 75 times or more.
+
+```{r}
+pos_tokens_count |>
+  # only words that appear 75 times or more
+  filter(n >= 75) |>
+  ggplot(aes(x = reorder(word, -n), y = n)) +
+  geom_bar(stat = "identity") +
+  labs(
+    title = "Count of Words Associated with Positivity",
+    subtitle = "Tweets with the hashtag #tidytuesday",
+    caption = "Data: Twitter and NRC",
+    x = "",
+    y = "Count"
+  ) 
+```
+
+### "Dataviz" and Other Positive Words
+
+Earlier in the analysis we learned that "dataviz" was among the most frequently occurring words in this dataset. We can continue our exploration of TidyTuesday tweets by seeing how many tweets with "dataviz" also had at least one positive word from the NRC dataset. Looking at this might give us some clues about how people in the TidyTuesday learning community view dataviz as a tool.
+
+There are a few steps to this part of the analysis, so let's review our strategy. We'll need to use the `status_id` field in the `tweets` dataset to filter the tweets that have the word `dataviz` in them. Then we need to use the `status_id` field in this new bunch of `dataviz` tweets to identify the tweets that include at least one positive word.
+
+How do we know which `status_id` values contain the word "dataviz" and which ones contain a positive word? Recall that our `tokens` dataset only has one word per row, which makes it easy to use functions like `filter()` and `inner_join()` to make two new datasets: one of `status_id` values that have "dataviz" in the `word` column and one of `status_id` values that have a positive word in the `word` column.
+
+We'll explore the combinations of "dataviz" and any positive words in our `tweets` dataset using these three ingredients: our `tweets` dataset, a vector of `status_id`s for tweets that have "dataviz" in them, and a vector of `status_id`s for tweets that have positive words in them. Now that we have our strategy, let's write some code and see how it works.
+
+First, we'll make a vector of `status_id`s for tweets that have "dataviz" in them. This will be used later to identify tweets that contain "dataviz" in the text. We'll use `filter()` on our `tokens` dataset to keep only the rows that have "dataviz" in the `word` column. Let's name that new dataset `dv_tokens`.
+
+```{r}
+dv_tokens <-
+  tokens %>%
+  filter(word == "dataviz")
+
+dv_tokens
+```
+
+The result is a dataset that has status_ids in one column and the word "dataviz" in the other column. We can use `$` to extract a vector of status_ids for tweets that have "dataviz" in the text. This vector has hundreds of values, so we'll use `head` to view just the first six.
+
+```{r}
+# Extract status_id
+head(dv_tokens$status_id)
+```
+
+Now let's do this again, but this time we'll we'll make a vector of `status_id`s for tweets that have positive words in them. This will be used later to identify tweets that contain a positive word in the text. We'll use `filter()` on our `tokens` dataset to keep only the rows that have any of the positive words in the in the `word` column. If you've been running all the code up to this point in the walkthrough, you'll notice that you already have a dataset of positive words called `nrc_pos`, which can be turned into a vector of positive words by typing `nrc_pos$word`. We can use the `%in%` operator in our call to `filter()` to find only words that are in this vector of positive words. Let's name this new dataset `pos_tokens`.
+
+```{r}
+pos_tokens <- 
+  tokens %>%
+  filter(word %in% nrc_pos$word)
+
+pos_tokens
+```
+
+The result is a dataset that has status_ids in one column and a positive word from `tokens` in the other column. We'll again use `$` to extract a vector of status_ids for these tweets.
+
+```{r}
+# Extract status_id
+head(pos_tokens$status_id) 
+```
+
+That's a lot of `status_id`s, many of which are duplicates. Let's try and make the vector of `status_id`s a little shorter. We can use `distinct()` to get a data frame of `status_id`s, where each `status_id` only appears once:
+
+```{r}
+pos_tokens <-
+  pos_tokens %>% 
+  distinct(status_id)
+```
+
+Note that `distinct()` drops all variables except for `status_id`. For good measure, let's use `distinct()` on our `dv_tokens` data frame too:
+
+```{r}
+dv_tokens <-
+  dv_tokens %>% 
+  distinct(status_id)
+```
+
+Now we have a data frame of `status_id` for tweets containing "dataviz" and another for tweets containing a positive word. Let's use these to transform our `tweets` dataset. First we'll filter `tweets` for rows that have the "dataviz" `status_id`. Then we'll create a new column called `positive` that will tell us if the `status_id` is from our vector of positive word `status_id`s. We'll name this filtered dataset `dv_pos`.
+
+```{r}
+dv_pos <-
+  tweets %>%
+  # Only tweets that have the dataviz status_id
+  filter(status_id %in% dv_tokens$status_id) %>%
+  # Is the status_id from our vector of positive word?
+  mutate(positive = if_else(status_id %in% pos_tokens$status_id, 1, 0))
+```
+
+Let's take a moment to dissect how we use `if_else()` to create our `positive` column. We gave `if_else()` three arguments:
+
+-   `status_id %in% pos_tokens$status_id`: a logical statement
+
+-   `1`: the value of `positive` if the logical statement is true
+
+-   `0`: the value of `positive` if the logical statement is false
+
+So our new `positive` column will take the value 1 if the `status_id` was in our `pos_tokens` dataset and the value 0 if the `status_id` was not in our `pos_tokens` dataset. Practically speaking, `positive` is 1 if the tweet has a positive word and 0 if it does not have a positive word.
+
+And finally, let's see what percent of tweets that had "dataviz" in them also had at least one positive word:
+
+```{r}
+dv_pos %>%
+  count(positive) %>%
+  mutate(perc = n / sum(n)) 
+```
+
+### Your Turn:
+
+**The table above represents the percent of tweets that had "dataviz", can you please interpret the result of the table and tell what did you discover at the end of this analysis?**
+
+**Your Response Here:**
+
+Since the point of exploratory data analysis is to explore and develop questions, let's continue to do that. In this last section we'll review a random selection of tweets for context.
+
+### Taking A Close Read of Randomly Selected Tweets
+
+Let's review where we are so far as we work to learn more about the TidyTuesday learning community through tweets. So far we've counted frequently used words and estimated the number of tweets with positive associations. This dataset is large, so we need to zoom out and find ways to summarize the data. But it's also useful to explore by zooming in and reading some of the tweets. Reading tweets helps us to build intuition and context about how users talk about TidyTuesday in general. Even though this doesn't lead to quantitative findings, it helps us to learn more about the content we're studying and analyzing. Instead of reading all 4418 tweets, let's write some code to randomly select tweets to review.
+
+First, let's make a dataset of tweets that had positive words from the NRC dataset. Remember earlier when we made a dataset of tweets that had "dataviz" and a column that had a value of 1 for containing positive words and 0 for not containing positive words? Let's reuse that technique, but instead of applying to a dataset of tweets containing "dataviz", let's use it on our dataset of all tweets.
+
+```{r}
+pos_tweets <-
+  tweets %>%
+  mutate(positive = if_else(status_id %in% pos_tokens$status_id, 1, 0)) %>%
+  filter(positive == 1)
+```
+
+Again, we're using `if_else` to make a new column called `positive` that takes its value based on whether `status_id %in% pos_tokens$status_id` is true or not.
+
+We can use `slice()` to help us pick the rows. When we pass `slice()` a row number, it returns that row from the dataset. For example, we can select the 1st and 3rd row of our tweets dataset this way:
+
+```{r}
+tweets %>% 
+  slice(1, 3)
+```
+
+Randomly selecting rows from a dataset is great technique to have in your toolkit. Random selection helps us avoid some of the biases we all have when we pick rows to review ourselves.
+
+Here's one way to do that using base R:
+
+```{r}
+sample(x = 1:10, size = 5)
+```
+
+Passing `sample()` a vector of numbers and the size of the sample you want returns a random selection from the vector. Try changing the value of `x` and `size` to see how this works.
+
+{dplyr} has a version of this called `sample_n()` that we can use to randomly select rows in our tweets dataset. Using `sample_n()` looks like this:
+
+```{r}
+set.seed(2020)
+
+pos_tweets %>% 
+  sample_n(., size = 10)
+```
+
+That returned ten randomly selected tweets that we can now read through and discuss. Let's look a little closer at how we did that. We used `sample_n()`, which returns randomly selected rows from our tweets dataset. We also specified that `size = 10`, which means we want `sample_n()` to give us 10 randomly selected rows. A few lines before that, we used `set.seed(2020)`. This helps us ensure that, while `sample_n()`theoretically plucks 10 random numbers, our readers can run this code and get the same result we did. Using `set.seed(2020)` at the top of your code makes `sample_n()` pick the same ten rows every time. Try changing `2020` to another number and notice how `sample_n()` picks a different set of ten numbers, but repeatedly picks those numbers until you change the argument in `set.seed()`.
+
+## Summary of Walkthrough 5
+
+The purpose of this walkthrough is to share code with you so you can practice some basic text analysis techniques. Now it's time to make your learning more meaningful by adapting this code to text-based files you regularly see at work. Trying reading in some of these and doing a similar analysis:
+
+-   News articles
+
+-   Procedure manuals
+
+-   Open ended responses in surveys
+
+There are also advanced text analysis techniques to explore. Consider trying topic modeling (<https://www.tidytextmining.com/topicmodeling.html>) or finding correlations between terms (<https://www.tidytextmining.com/ngrams.html>), both described in ([Silge & Robinson, 2017](https://datascienceineducation.com/references#ref-silge2017text)).
+
+Finally, if you feel like there is more to analyze where it comes to this particular hashtag, we agree! We use this data set further in the next chapter [on social network analysis](https://datascienceineducation.com/c12#c12). Moreover, if you want to collect our own Twitter data, head to [Appendix B](https://datascienceineducation.com/c11#c20b) to read about and consider some potential strategies.
+
+# Walkthrough 6: Exploring Relationships Using Social Network Analysis With Social Media Data
+
+### Topics Emphasized
+
+-   Transforming data
+
+-   Visualizing data
+
+### Functions Introduced
+
+-   `rtweet::search_tweets()`
+
+-   `randomNames::randomNames()`
+
+-   `tidyr::unnest()`
+
+-   `tidygraph::as_tbl_graph()`
+
+-   `ggraph::ggraph()`
+
+### Vocabulary
+
+-   Application Programming Interface (API)
+
+-   edgelist
+
+-   edge
+
+-   influence model
+
+-   regex
+
+-   selection model
+
+-   social network analysis
+
+-   sociogram
+
+-   vertex
+
+## Chapter Overview
+
+In the previous walkthrough, we focused on using text analysis to understand the *content* of tweets. In this, we focus on the *interactions* between #tidytuesday participants using social network analysis techniques.
+
+While social network analysis is increasingly common, it remains challenging to carry out. For one, cleaning and tidying the data can be even more challenging than for most other data sources, as net data for social network analysis (or network data) often includes variables about both individuals (such as information students or teachers) and their relationships (whether they have a relationship at all, for example, or how strong or of what type their relationship is). This chapter is designed to take you from not having carried out social network analysis through visualizing network data.
+
+### Background
+
+There are a few reasons to be interested in social media. For example, if you work in a school district, you may want to know who is interacting with the content you share. If you are a researcher, you may want to investigate what teachers, administrators, and others do through state-based hashtags (e.g., Joshua M. Rosenberg et al. ([2016](https://datascienceineducation.com/references#ref-rosenberg2016))). Social media-based data also provides new contexts for learning to take place, like in professional learning networks ([Trust et al., 2016](https://datascienceineducation.com/references#ref-trust2016)).
+
+In the past, if a teacher wanted advice about how to plan a unit or to design a lesson, they would turn to a trusted peer in their building or district ([Spillane et al., 2012](https://datascienceineducation.com/references#ref-spillane2012)). Today they are as likely to turn to someone in a social media network. Social media interactions like the ones tagged with the #tidytuesday hashtag are increasingly common in education. Using data science tools to learn from these interactions is valuable for improving the student experience.
+
+### Packages
+
+In this chapter, we access data using the {rtweet} package ([Michael W. Kearney, 2016](https://datascienceineducation.com/references#ref-kearney2016)). Through {rtweet} and a Twitter account, it is easy to access data from Twitter. We will load the {tidyverse} and {rtweet} packages to get started.
+
+We will also load other packages that we will be using in this analysis, including two packages related to social network analysis ([Pedersen, 2022b](https://datascienceineducation.com/references#ref-R-tidygraph), [2022a](https://datascienceineducation.com/references#ref-R-ggraph)) as well as one that will help us to use not-anonymized names in a savvy way ([Betebenner, 2021](https://datascienceineducation.com/references#ref-R-randomNames)). As always, if you have not installed any of these packages before (which may particularly be the case for the {rtweet}, {randomNames}, {tidygraph}, and {ggraph} packages, which we have not yet used int he book), do so using the `install.packages()` function. More on installing packages is included in the [Packages](https://datascienceineducation.com/c06#c06p) section of the [Foundational Skills](https://datascienceineducation.com/c06#c06) chapter.
+
+Let's load the packages with the following calls to the `library()` function:
+
+```{r}
+library(rtweet)
+library(dataedu)
+library(randomNames)
+library(tidygraph)
+library(ggraph)
+```
+
+### Data Sources and Import
+
+Here is an example of searching the most recent 1,000 tweets which include the hashtag #rstats. When you run this code, you will be prompted to authenticate your access via Twitter.
+
+You can find a greater number of tweets by adding a greater value to the `n` argument of the `search_tweets()` function, as follows, to collect the most recent 500 tweets:
+
+```{r}
+tt_tweets <- dataedu::tt_tweets
+```
+
+### View Data
+
+### Your Turn
+
+View the tt_tweets data with nrow() or glimpse() functions.
+
+```{r}
+glimpse(tt_tweets)
+```
+
+## Methods: Process Data
+
+Network data requires some processing before it can be used in subsequent analyses. The network dataset needs a way to identify each participant's role in the interaction. We need to answer questions like:
+
+-   Did someone reach out to another for help?
+
+-   Was someone contacted by another for help?
+
+We can process the data by creating an *edgelist*. An edgelist is a dataset where each row is a unique interaction between two parties. Each row (which represents a single relationship) in the edgelist is referred to as an *edge*. We note that one challenge facing data scientists beginning to use network analysis is the different terms that are used for similar (or the same!) aspects of analyses: Edges are sometimes referred to as *ties* or *relations*, but these generally refer to the same thing, though they may be used in different contexts.
+
+An edgelist looks like the following, where the `sender` (sometimes called the "nominator") column identifies who is initiating the interaction and the `receiver` (sometimes called the "nominee") column identifies who is receiving the interaction:
+
+![](IMG/Edgelist_img.png){width="522"}
+
+In this edgelist, the `sender` column might identify someone who nominates another (the receiver) as someone they go to for help. The sender might also identify someone who interacts with the receiver in other ways, like "liking" or "mentioning" their tweets. In the following steps, we will work to create an edgelist from the data from #tidytuesday on Twitter.
+
+### Extracting Mentions
+
+Let's extract the mentions. There is a lot going on in the code below; let's break it down line-by-line, starting with `mutate()`:
+
+-   `mutate(all_mentions = str_extract_all(text, regex))`: this line uses a regex, or regular expression, to identify all of the usernames in the tweet (*note*: the regex comes from from [this Stack Overflow page](https://stackoverflow.com/questions/18164839/get-twitter-username-with-regex-in-r) (https://stackoverflow.com/questions/18164839/get-twitter-username-with-regex-in-r))
+
+-   `unnest(all_mentions)` this line uses a {tidyr} function, `unnest()` to move every mention to its own line, while keeping all of the other information the same (see more about `unnest()` here: <https://tidyr.tidyverse.org/reference/unnest.html>)).
+
+Now let's use these functions to extract the mentions from the dataset. Here's how all the code looks in action:
+
+```{r}
+regex <- "@([A-Za-z]+[A-Za-z0-9_]+)(?![A-Za-z0-9_]*\\.)"
+
+tt_tweets <-
+  tt_tweets %>%
+  # Use regular expression to identify all the usernames in a tweet
+  mutate(all_mentions = str_extract_all(text, regex)) %>%
+  unnest(all_mentions)
+```
+
+Let's put these into their own data frame, called `mentions`.
+
+```{r}
+mentions <-
+  tt_tweets %>%
+  mutate(all_mentions = str_trim(all_mentions)) %>%
+  select(sender = screen_name, all_mentions)
+```
+
+### Putting the Edgelist Together
+
+Recall that an edgelist is a data structure that has columns for the "sender" and "receiver" of interactions. Someone "sends" the mention to someone who is mentioned, who can be considered to "receive" it. To make the edgelist, we'll need to clean it up a little by removing the "\@" symbol. Let's look at our data as it is now.
+
+```{r}
+mentions
+```
+
+Let's remove that "\@" symbol from the columns we created and save the results to a new tibble, `edgelist`.
+
+```{r}
+edgelist <- 
+  mentions %>% 
+  # remove "@" from all_mentions column
+  mutate(all_mentions = str_sub(all_mentions, start = 2)) %>% 
+  # rename all_mentions to receiver
+  select(sender, receiver = all_mentions)
+```
+
+## Analysis and Results
+
+Now that we have our edgelist, let's plot the network. We'll use the {tidygraph} and {ggraph} packages to visualize the data. We note that network visualizations are often referred to as *sociograms*, or a representation of the relationships between individuals in a network. We use this term and the term network visualization interchangeably in this chapter.
+
+### Plotting the Network
+
+Large networks like this one can be hard to work with because of their size. We can get around that problem by only include some individuals. Let's explore how many interactions each individual in the network sent by using `count()`:
+
+```{r}
+interactions_sent <- edgelist %>% 
+  # this counts how many times each sender appears in the data frame, effectively counting how many interactions each individual sent 
+  count(sender) %>% 
+  # arranges the data frame in descending order of the number of interactions sent
+  arrange(desc(n))
+
+interactions_sent
+```
+
+### Your Turn:
+
+**The user "thomas_mock" had over 300 interactions at the top, whereas the next most popular user named "R4DScommunity" only had 78 interactions.**
+
+Your Response**:**
+
+```{r}
+interactions_sent <- 
+  interactions_sent %>% 
+  filter(n > 1)
+```
+
+That leaves us with only 349, which will be much easier to work with.
+
+We now need to filter the edgelist to only include these 349 individuals. The following code uses the `filter()` function combined with the `%in%` operator to do this:
+
+```{r}
+edgelist <- edgelist %>% 
+  # the first of the two lines below filters to include only senders in the interactions_sent data frame
+  # the second line does the same, for receivers
+  filter(sender %in% interactions_sent$sender,
+         receiver %in% interactions_sent$sender)
+```
+
+We'll use the `as_tbl_graph()` function, which identifies the first column as the "sender" and the second as the "receiver." Let's look at the object it creates:
+
+```{r}
+g <- 
+  as_tbl_graph(edgelist)
+
+g
+```
+
+We can see that the network now has 267 individuals, all of which sent more than one interaction. The individuals in a network are often referred to as *nodes* (and, this terminology is used in the {ggraph} functions for plotting the individuals - the nodes - in a network). We note that nodes are sometimes referred to as *vertices* or *actors*; like the different names for edges, these generally mean the same thing.
+
+Next, we'll use the `ggraph()` function:
+
+```{r}
+g %>%
+  # we chose the kk layout as it created a graph which was easy-to-interpret, but others are available; see ?ggraph
+  ggraph(layout = "kk") +
+  # this adds the points to the graph
+  geom_node_point() +
+  # this adds the links, or the edges; alpha = .2 makes it so that the lines are partially transparent
+  geom_edge_link(alpha = .2) +
+  # this last line of code adds a ggplot2 theme suitable for network graphs
+  theme_graph()
+```
+
+Finally, let's size the points based on a measure of centrality. A common way to do this is to measure how influential an individual may be based on the interactions observed.
+
+```{r}
+g %>% 
+  # this calculates the centrality of each individual using the built-in centrality_authority() function
+  mutate(centrality = centrality_authority()) %>% 
+  ggraph(layout = "kk") + 
+  geom_node_point(aes(size = centrality, color = centrality)) +
+  # this line colors the points based upon their centrality
+  scale_color_continuous(guide = 'legend') + 
+  geom_edge_link(alpha = .2) 
+```
+
+### Your Turn
+
+**What this social network graph tells us regarding to the measure of centrality?**
+
+-   **I am not sure what the measure of centrality totally means, but I think that it means there are a few individuals/users that are influential based on how often other users interact with them or communicate with them.**
+
+## Conclusion
+
+In this chapter, we used social media data from the #tidytuesday hashtag to prepare and visualize social network data. Sociograms are a useful visualization tool to reveal who is interacting with whom--and, in some cases, to suggest why. In our applications of data science, we have found that the individuals (such as teachers or students) who are represented in a network often like to see what the network (and the relationships in it) *look like*. It can be compelling to think about why networks are the way they are, and how changes could be made to - for example - foster more connections between individuals who have few opportunities to interact. In this way, social network analysis can be useful to the data scientist in education because it provides a technique to communicate with other educational stakeholders in a compelling way.
+
+Social network analysis is a broad (and growing) domain, and this chapter was intended to present some of its foundation. Fortunately for R users, many recent developments are implemented first in R (e.g., ([**R-amen?**](https://datascienceineducation.com/c12#ref-R-amen))). If you are interested in some of the additional steps that you can take to model and analyze network data, consider the appendix on two types of models (for selection and influence processes), [Appendix C](https://datascienceineducation.com/c20#c20c).
